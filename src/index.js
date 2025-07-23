@@ -4,18 +4,62 @@ window.addEventListener('DOMContentLoaded', () => {
   const urlInput = document.getElementById('videoUrlInput');
   const saveBtn = document.getElementById('saveUrlBtn');
   const reloadBtn = document.getElementById('reloadBtn');
+  const backBtn = document.getElementById('backBtn');
   const toolbar = document.getElementById('topbar');
   const fileBrowser = document.getElementById('fileBrowser');
 
-  // Por defecto, mostrar el file browser y ocultar el video
-  video.style.display = 'none';
-  fileBrowser.style.display = '';
-  // Cargar URL guardada o por defecto (pero no mostrar el video de inicio)
-  const savedUrl = localStorage.getItem('videoUrl') || '';
-  urlInput.value = savedUrl;
-  if (savedUrl) {
-    video.src = savedUrl;
+  // Extensiones válidas para el tag <video>
+  const VALID_VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogg'];
+
+  function isValidVideoUrl(url) {
+    try {
+      const u = new URL(url, window.location.href);
+      return VALID_VIDEO_EXTENSIONS.some((ext) =>
+        u.pathname.toLowerCase().endsWith(ext)
+      );
+    } catch {
+      return false;
+    }
   }
+
+  // Decide qué mostrar según la URL actual
+  function updateViewFromUrl(url) {
+    // Actualiza el input siempre que se cambie el recurso
+    urlInput.value = url || '';
+    if (url && isValidVideoUrl(url)) {
+      video.src = url;
+      video.style.display = '';
+      fileBrowser.style.display = 'none';
+      video.focus();
+    } else {
+      fileBrowser.src = url || '';
+      fileBrowser.style.display = '';
+      video.style.display = 'none';
+      fileBrowser.focus();
+    }
+  }
+
+  // Botón para volver atrás (mostrar file browser y ocultar video)
+  backBtn.addEventListener('click', () => {
+    video.pause();
+    // Al volver atrás, poner la URL del home (iframe)
+    const homeUrl = localStorage.getItem('homeUrl') || fileBrowser.src || '';
+    updateViewFromUrl(homeUrl);
+  });
+
+  // Guardar la URL "home" (la del iframe inicial) para poder volver a ella
+  const initialHomeUrl =
+    document.getElementById('fileBrowser').getAttribute('src') || '';
+  localStorage.setItem('homeUrl', initialHomeUrl);
+
+  // Al cargar, usar la URL del input o la guardada
+  const savedUrl = localStorage.getItem('videoUrl') || '';
+  if (savedUrl) {
+    updateViewFromUrl(savedUrl);
+  } else {
+    updateViewFromUrl(initialHomeUrl);
+  }
+
   // Interceptar clicks en el iframe para detectar mp4 y mostrar el video
   fileBrowser.addEventListener('load', () => {
     try {
@@ -37,12 +81,8 @@ window.addEventListener('DOMContentLoaded', () => {
                 const base = new URL(fileBrowser.src);
                 absUrl = new URL(href, base).toString();
               }
-              video.src = absUrl;
-              urlInput.value = absUrl;
               localStorage.setItem('videoUrl', absUrl);
-              fileBrowser.style.display = 'none';
-              video.style.display = '';
-              video.focus();
+              updateViewFromUrl(absUrl);
             }
           }
         },
@@ -54,37 +94,18 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Extensiones válidas para el tag <video>
-  const VALID_VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogg'];
-
-  function isValidVideoUrl(url) {
-    try {
-      const u = new URL(url, window.location.href);
-      return VALID_VIDEO_EXTENSIONS.some((ext) =>
-        u.pathname.toLowerCase().endsWith(ext)
-      );
-    } catch {
-      return false;
-    }
-  }
+  // ...existing code...
 
   // Guardar nueva URL
   saveBtn.addEventListener('click', () => {
     const url = urlInput.value.trim();
-    if (url && isValidVideoUrl(url)) {
-      localStorage.setItem('videoUrl', url);
-      video.src = url;
-      // Reiniciar posiciones guardadas para el nuevo video
-      localStorage.removeItem('videoPositions');
-      // Mostrar el video y ocultar el file browser
-      fileBrowser.style.display = 'none';
-      video.style.display = '';
-      video.focus();
-    } else {
-      // Si el usuario quiere volver al file browser (por ejemplo, con un botón o evento)
-      // Aquí puedes añadir lógica para mostrar el fileBrowser y ocultar el video si lo deseas
+    localStorage.setItem('videoUrl', url);
+    // Reiniciar posiciones guardadas para el nuevo video
+    localStorage.removeItem('videoPositions');
+    updateViewFromUrl(url);
+    if (!isValidVideoUrl(url) && url) {
       alert(
-        'Invalid URL. Only HTML5 compatible videos are accepted: ' +
+        'La URL no es un vídeo compatible. Se mostrará el contenido como navegador de archivos. Vídeos válidos: ' +
           VALID_VIDEO_EXTENSIONS.join(', ')
       );
     }
@@ -141,7 +162,7 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
   // Hacer los elementos del toolbar y el video focuseables
-  [urlInput, saveBtn, reloadBtn, video].forEach((el) => {
+  [urlInput, saveBtn, reloadBtn, backBtn, video].forEach((el) => {
     if (el) el.setAttribute('tabindex', '0');
   });
 
@@ -157,7 +178,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Navegación avanzada con flechas y enter (incluye el video)
   const ARROW_KEY_CODE = { 37: 'left', 38: 'up', 39: 'right', 40: 'down' };
-  const focusables = [urlInput, saveBtn, reloadBtn, video];
+  const focusables = [urlInput, saveBtn, reloadBtn, backBtn, video];
 
   toolbar.addEventListener(
     'keydown',
