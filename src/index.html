@@ -1,0 +1,98 @@
+<!doctype html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="index.js"></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background: #111;
+        color: #fff;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      #topbar {
+        background: #222;
+        padding: 0;
+        display: flex;
+        align-items: stretch;
+        gap: 0;
+        height: 56px;
+        width: 100vw;
+        min-width: 0;
+        box-sizing: border-box;
+        padding: 5px;
+      }
+      #videoUrlInput {
+        flex: 1 1 0%;
+        width: 100%;
+        height: 100%;
+        border: none;
+        outline: none;
+        padding: 0 16px;
+        font-size: 1.1rem;
+        background: #222;
+        color: #fff;
+        box-sizing: border-box;
+      }
+      #saveUrlBtn {
+        height: 100%;
+        border: none;
+        background: #444;
+        color: #fff;
+        font-size: 1.1rem;
+        padding: 0 24px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      #saveUrlBtn:hover {
+        background: #666;
+      }
+      #reloadBtn {
+        height: 100%;
+        border: none;
+        background: #444;
+        color: #fff;
+        font-size: 1.1rem;
+        padding: 0 24px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      #reloadBtn:hover {
+        background: #666;
+      }
+      #mainVideo {
+        flex: 1 1 auto;
+        zoom: 1.2;
+        width: calc(100% - 30px);
+        background: #000;
+        display: block;
+        object-fit: contain;
+        margin: 5px auto;
+        box-sizing: border-box;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="topbar">
+      <input
+        id="videoUrlInput"
+        type="text"
+        placeholder="Video URL (http://IP:PORT/VIDEO.mp4)"
+        style="flex: 1; font-size: 1.5rem"
+      />
+      <button
+        id="saveUrlBtn"
+        style="padding: 6px 16px; font-size: 1.5rem; margin-right: 5px"
+      >
+        Guardar
+      </button>
+      <button id="reloadBtn" style="padding: 6px 16px; font-size: 1.5rem">
+        Recargar
+      </button>
+    </div>
+    <video id="mainVideo" controls></video>
+  </body>
+</html>

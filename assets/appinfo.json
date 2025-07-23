@@ -1,0 +1,22 @@
+{
+  "id": "rvp.adamffdev.v1",
+  "version": "1.3.1",
+  "vendor": "webosbrew.org",
+  "type": "web",
+  "main": "index.html",
+  "title": "Remote Video Player",
+  "icon": "icon.jpg",
+  "splashBackground": "splash.png",
+  "largeIcon": "largeIcon.png",
+  "iconColor": "#00000",
+  "vendorExtension": {
+    "userAgent": "$browserName$/$browserVersion$ ($platformName$-$platformVersion$), _TV_O18/$firmwareVersion$ (LG, $modelName$, $networkMode$)",
+    "allowCrossDomain": true
+  },
+  "enablePigScreenSaver": false,
+  "privilegedJail": true,
+  "supportQuickStart": true,
+  "dialAppName": "Twitch AdFree",
+  "disableBackHistoryAPI": false,
+  "supportGIP": true
+}
