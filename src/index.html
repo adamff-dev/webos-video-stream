@@ -52,13 +52,30 @@
       }
       #mainVideo {
         flex: 1 1 auto;
-        zoom: 1.2;
         width: calc(100% - 30px);
         background: #000;
         display: block;
         object-fit: contain;
         margin: 5px auto;
         box-sizing: border-box;
+      }
+      video::-webkit-media-controls-play-button,
+      video::-webkit-media-controls-fullscreen-button,
+      video::-webkit-media-controls-mute-button,
+      video::-webkit-media-controls-volume-slider {
+        transform: scale(2, 2);
+      }
+      video::-webkit-media-controls-current-time-display {
+        transform: scale(2, 2);
+        margin-right: 20px;
+        margin-left: 20px;
+      }
+      video::-webkit-media-controls-time-remaining-display {
+        transform: scale(2, 2);
+        margin-left: 20px;
+      }
+      video::-webkit-media-controls-timeline {
+        transform: scale(1, 1.5);
       }
     </style>
   </head>
