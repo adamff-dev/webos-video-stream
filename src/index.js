@@ -5,12 +5,54 @@ window.addEventListener('DOMContentLoaded', () => {
   const saveBtn = document.getElementById('saveUrlBtn');
   const reloadBtn = document.getElementById('reloadBtn');
   const toolbar = document.getElementById('topbar');
+  const fileBrowser = document.getElementById('fileBrowser');
 
-  // Cargar URL guardada o por defecto
-  const savedUrl =
-    localStorage.getItem('videoUrl') || 'http://192.168.0.13:8080/v.mp4';
+  // Por defecto, mostrar el file browser y ocultar el video
+  video.style.display = 'none';
+  fileBrowser.style.display = '';
+  // Cargar URL guardada o por defecto (pero no mostrar el video de inicio)
+  const savedUrl = localStorage.getItem('videoUrl') || '';
   urlInput.value = savedUrl;
-  video.src = savedUrl;
+  if (savedUrl) {
+    video.src = savedUrl;
+  }
+  // Interceptar clicks en el iframe para detectar mp4 y mostrar el video
+  fileBrowser.addEventListener('load', () => {
+    try {
+      const doc =
+        fileBrowser.contentDocument || fileBrowser.contentWindow.document;
+      doc.addEventListener(
+        'click',
+        function (e) {
+          let el = e.target;
+          while (el && el.tagName !== 'A') el = el.parentElement;
+          if (el && el.tagName === 'A') {
+            const href = el.getAttribute('href');
+            if (href && /\.mp4(?:$|\?)/i.test(href)) {
+              e.preventDefault();
+              e.stopPropagation();
+              // Construir URL absoluta
+              let absUrl = href;
+              if (!/^https?:\/\//.test(href)) {
+                const base = new URL(fileBrowser.src);
+                absUrl = new URL(href, base).toString();
+              }
+              video.src = absUrl;
+              urlInput.value = absUrl;
+              localStorage.setItem('videoUrl', absUrl);
+              fileBrowser.style.display = 'none';
+              video.style.display = '';
+              video.focus();
+            }
+          }
+        },
+        true
+      );
+    } catch (err) {
+      // Puede fallar por CORS si el servidor no permite acceso
+      console.error('No se pudo acceder al contenido del iframe:', err);
+    }
+  });
 
   // Extensiones válidas para el tag <video>
   const VALID_VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogg'];
@@ -34,7 +76,13 @@ window.addEventListener('DOMContentLoaded', () => {
       video.src = url;
       // Reiniciar posiciones guardadas para el nuevo video
       localStorage.removeItem('videoPositions');
+      // Mostrar el video y ocultar el file browser
+      fileBrowser.style.display = 'none';
+      video.style.display = '';
+      video.focus();
     } else {
+      // Si el usuario quiere volver al file browser (por ejemplo, con un botón o evento)
+      // Aquí puedes añadir lógica para mostrar el fileBrowser y ocultar el video si lo deseas
       alert(
         'Invalid URL. Only HTML5 compatible videos are accepted: ' +
           VALID_VIDEO_EXTENSIONS.join(', ')
