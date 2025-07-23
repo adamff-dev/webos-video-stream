@@ -1,11 +1,12 @@
 // --- Video URL y resume logic ---
 window.addEventListener('DOMContentLoaded', () => {
+  const savedUrl = localStorage.getItem('savedUrl') || '';
+
   const video = document.getElementById('mainVideo');
   const urlInput = document.getElementById('videoUrlInput');
   const saveBtn = document.getElementById('saveUrlBtn');
   const reloadBtn = document.getElementById('reloadBtn');
   const backBtn = document.getElementById('backBtn');
-  const toolbar = document.getElementById('topbar');
   const fileBrowser = document.getElementById('fileBrowser');
 
   // Extensiones válidas para el tag <video>
@@ -43,28 +44,87 @@ window.addEventListener('DOMContentLoaded', () => {
   backBtn.addEventListener('click', () => {
     video.pause();
     // Al volver atrás, poner la URL del home (iframe)
-    const homeUrl = localStorage.getItem('homeUrl') || fileBrowser.src || '';
+    const homeUrl = savedUrl.replace(/\/[^/]*$/, '/');
     updateViewFromUrl(homeUrl);
   });
 
-  // Guardar la URL "home" (la del iframe inicial) para poder volver a ella
-  const initialHomeUrl =
-    document.getElementById('fileBrowser').getAttribute('src') || '';
-  localStorage.setItem('homeUrl', initialHomeUrl);
-
   // Al cargar, usar la URL del input o la guardada
-  const savedUrl = localStorage.getItem('videoUrl') || '';
   if (savedUrl) {
     updateViewFromUrl(savedUrl);
-  } else {
-    updateViewFromUrl(initialHomeUrl);
   }
 
-  // Interceptar clicks en el iframe para detectar mp4 y mostrar el video
+  // Interceptar clicks y navegación en el iframe
   fileBrowser.addEventListener('load', () => {
     try {
       const doc =
         fileBrowser.contentDocument || fileBrowser.contentWindow.document;
+
+      // Hacer que todos los elementos navegables sean focuseables y darles estilos de focus
+      const iframeStyle = doc.createElement('style');
+      iframeStyle.textContent = `
+        a:focus, button:focus, input:focus, select:focus, textarea:focus {
+          outline: 2px solid #00bfff !important;
+          z-index: 2;
+        }
+      `;
+      doc.head.appendChild(iframeStyle);
+
+      // Hacer que todos los elementos sean focuseables
+      doc
+        .querySelectorAll('a, button, input, select, textarea')
+        .forEach((el) => {
+          el.setAttribute('tabindex', '0');
+          // Asegurarnos de que los enlaces sean clicables
+          el.style.cursor = 'pointer';
+        });
+
+      // Propagar los eventos del mando al iframe
+      doc.addEventListener(
+        'keydown',
+        (evt) => {
+          // Si el evento ya fue manejado por el documento principal, no hacer nada
+          if (evt.defaultPrevented) return;
+
+          if (evt.keyCode in LG_KEY_CODE) {
+            const direction = LG_KEY_CODE[evt.keyCode];
+            const iframeElements = getFocusableElements(doc);
+
+            if (iframeElements.length === 0) return;
+
+            const currentIndex = iframeElements.indexOf(doc.activeElement);
+            let nextIndex = currentIndex;
+
+            if (direction === 'right' || direction === 'down') {
+              nextIndex = currentIndex + 1;
+              if (nextIndex >= iframeElements.length) {
+                // Si llegamos al final del iframe, mover el foco al saveBtn del documento principal
+                saveBtn.focus();
+                evt.preventDefault();
+                evt.stopPropagation();
+                return;
+              }
+            } else if (direction === 'left' || direction === 'up') {
+              nextIndex = currentIndex - 1;
+              if (nextIndex < 0) {
+                // Si llegamos al inicio del iframe, mover el foco al urlInput del documento principal
+                urlInput.focus();
+                evt.preventDefault();
+                evt.stopPropagation();
+                return;
+              }
+            } else if (direction === 'enter' && doc.activeElement) {
+              doc.activeElement.click();
+            } // Solo enfocar si encontramos un elemento válido
+            if (iframeElements[nextIndex]) {
+              iframeElements[nextIndex].focus();
+              evt.preventDefault();
+              evt.stopPropagation();
+            }
+          }
+        },
+        true
+      );
+
       doc.addEventListener(
         'click',
         function (e) {
@@ -81,7 +141,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 const base = new URL(fileBrowser.src);
                 absUrl = new URL(href, base).toString();
               }
-              localStorage.setItem('videoUrl', absUrl);
+              localStorage.setItem('savedUrl', absUrl);
               updateViewFromUrl(absUrl);
             }
           }
@@ -99,7 +159,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // Guardar nueva URL
   saveBtn.addEventListener('click', () => {
     const url = urlInput.value.trim();
-    localStorage.setItem('videoUrl', url);
+    localStorage.setItem('savedUrl', url);
     // Reiniciar posiciones guardadas para el nuevo video
     localStorage.removeItem('videoPositions');
     updateViewFromUrl(url);
@@ -176,55 +236,118 @@ window.addEventListener('DOMContentLoaded', () => {
   `;
   document.head.appendChild(style);
 
-  // Navegación avanzada con flechas y enter (incluye el video)
-  const ARROW_KEY_CODE = { 37: 'left', 38: 'up', 39: 'right', 40: 'down' };
-  const focusables = [urlInput, saveBtn, reloadBtn, backBtn, video];
+  // Navegación avanzada con mando LG (usando simulación de Tab)
+  const LG_KEY_CODE = {
+    37: 'left', // Izquierda
+    38: 'up', // Arriba
+    39: 'right', // Derecha
+    40: 'down', // Abajo
+    13: 'enter', // Enter/OK
+    461: 'back' // Back
+  };
 
-  toolbar.addEventListener(
+  // Función para obtener todos los elementos focuseables
+  function getFocusableElements(doc = document) {
+    return Array.from(
+      doc.querySelectorAll(
+        'a[href], button, input, select, video, textarea, iframe'
+      )
+    ).filter((el) => el.offsetWidth > 0 && el.offsetHeight > 0 && !el.disabled);
+  }
+
+  // Manejador global de teclas para el mando LG
+  document.addEventListener(
     'keydown',
     (evt) => {
-      if (evt.keyCode in ARROW_KEY_CODE) {
-        const direction = ARROW_KEY_CODE[evt.keyCode];
-        const currentIndex = focusables.indexOf(document.activeElement);
-        let nextIndex = currentIndex;
-        if (direction === 'right' || direction === 'down') {
-          nextIndex = (currentIndex + 1) % focusables.length;
-        } else if (direction === 'left' || direction === 'up') {
-          nextIndex =
-            (currentIndex - 1 + focusables.length) % focusables.length;
+      if (evt.keyCode in LG_KEY_CODE) {
+        const direction = LG_KEY_CODE[evt.keyCode];
+
+        // Si estamos dentro del iframe o en el video, dejar que ellos manejen la navegación
+        try {
+          if (
+            (fileBrowser.style.display !== 'none' &&
+              fileBrowser.contentDocument &&
+              fileBrowser.contentDocument.activeElement !==
+                fileBrowser.contentDocument.body) ||
+            document.activeElement === video
+          ) {
+            return; // Dejar que el iframe o el video manejen el evento
+          }
+        } catch (err) {
+          console.error('Error accediendo al iframe:', err);
         }
-        focusables[nextIndex].focus();
+
+        // Obtener elementos focuseables del documento principal
+        let elements = getFocusableElements();
+
+        // Si no hay elemento activo o el elemento activo no está en la lista,
+        // empezar desde el principio o el final según la dirección
+        let currentIndex = elements.indexOf(document.activeElement);
+        if (currentIndex === -1) {
+          currentIndex =
+            direction === 'left' || direction === 'up' ? elements.length : -1;
+        }
+
+        let nextIndex = currentIndex;
+
+        if (direction === 'right' || direction === 'down') {
+          nextIndex = currentIndex + 1;
+          if (nextIndex >= elements.length) nextIndex = 0;
+        } else if (direction === 'left' || direction === 'up') {
+          nextIndex = currentIndex - 1;
+          if (nextIndex < 0) nextIndex = elements.length - 1;
+        } else if (direction === 'enter') {
+          // Si hay un elemento activo, hacer click
+          if (
+            document.activeElement &&
+            document.activeElement !== document.body
+          ) {
+            document.activeElement.click();
+          }
+        }
+
+        // Enfocar el siguiente elemento
+        if (elements[nextIndex]) {
+          elements[nextIndex].focus();
+        }
+
         evt.preventDefault();
         evt.stopPropagation();
-      } else if (evt.keyCode === 13) {
-        // Enter
-        if (document.activeElement) {
-          document.activeElement.click();
-          evt.preventDefault();
-          evt.stopPropagation();
+
+        // Enfocar el siguiente elemento
+        if (nextIndex !== currentIndex && elements[nextIndex]) {
+          elements[nextIndex].focus();
         }
+
+        evt.preventDefault();
+        evt.stopPropagation();
       }
     },
     true
   );
 
-  // Si el focus está en el vídeo y se pulsa flecha arriba, enfocar el input
+  // Manejo especial de navegación cuando el foco está en el video
   video.addEventListener('keydown', (evt) => {
     if (evt.keyCode === 38) {
-      urlInput.focus();
-      evt.preventDefault();
-      evt.stopPropagation();
-    }
-  });
-
-  // Si se pulsa flecha arriba mientras el video está en play, mostrar toolbar y enfocar input
-  video.addEventListener('keydown', (evt) => {
-    if (evt.keyCode === 38) {
-      // ArrowUp
+      // Arriba
       if (!video.paused) {
         showToolbar();
       }
       urlInput.focus();
+      evt.preventDefault();
+      evt.stopPropagation();
+    } else if (evt.keyCode === 40) {
+      // Abajo
+      if (!video.paused) {
+        hideToolbar();
+      }
+    } else if (evt.keyCode === 13) {
+      // Enter - toggle play/pause
+      if (video.paused) {
+        video.play();
+      } else {
+        video.pause();
+      }
       evt.preventDefault();
       evt.stopPropagation();
     }
