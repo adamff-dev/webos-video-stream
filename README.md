@@ -4,6 +4,10 @@ A webOS application that allows you to browse and stream video files from a remo
 
 Based on [youtube-webos](https://github.com/webosbrew/youtube-webos)
 
+## Preview
+
+![Video Stream Preview](https://i.imgur.com/vOLDLUk.png)
+
 ## Features
 
 - **Server File Browser**: Browse files and directories on your media server through an intuitive interface
@@ -21,19 +25,22 @@ Based on [youtube-webos](https://github.com/webosbrew/youtube-webos)
 ## Supported Video Formats
 
 The application supports the following video formats that are natively supported by webOS:
+
 - **MP4** (.mp4) - H.264/H.265 codecs
-- **WebM** (.webm) - VP8/VP9 codecs  
+- **WebM** (.webm) - VP8/VP9 codecs
 - **OGG** (.ogg) - Theora codec
 
 ## Server Requirements
 
 Your media server should:
+
 - Serve files over HTTP/HTTPS
 - Provide directory listings (file browser functionality)
 - Allow direct access to video files
 - Support CORS if running on a different domain
 
 Compatible servers include:
+
 - **SHTTPS** - Android app for creating HTTP server ([Google Play Store](https://play.google.com/store/apps/details?id=com.phlox.simpleserver))
 - **HTTP File Server (HFS)** - Windows GUI application for file sharing ([rejetto.com](https://www.rejetto.com/hfs/))
 - Python's built-in HTTP server (`python -m http.server`)
